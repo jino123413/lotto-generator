@@ -9,7 +9,7 @@ export default defineConfig({
   plugins: [
     appsInToss({
       brand: {
-        displayName: '로또 번호 생성기',
+        displayName: '로또메이트',
         primaryColor: '#FF6B35',
         icon: 'https://static.toss.im/appsintoss/73/10550764-5ac1-44e2-9ff3-ad78d8d2e71a.png',
         bridgeColorMode: 'basic',

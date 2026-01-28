@@ -107,7 +107,7 @@ export default function LottoGenerator() {
       {/* 헤더 */}
       <View style={styles.header}>
         <Text typography="h4" fontWeight="bold" style={styles.headerTitle}>
-          로또 번호 생성기
+          로또메이트
         </Text>
         <Text typography="body3" style={styles.headerSub}>
           행운의 번호를 생성해보세요
