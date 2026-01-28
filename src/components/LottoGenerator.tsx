@@ -68,9 +68,15 @@ export default function LottoGenerator() {
     setGeneratedGames(games);
   };
 
+  // 번호 생성 (광고 없이 바로 실행)
   const handleGenerate = () => {
+    performGeneration();
+  };
+
+  // 새로 생성하기 (광고 표시 후 초기화)
+  const handleReset = () => {
     if (!adAvailableRef.current || !adLoadedRef.current) {
-      performGeneration();
+      resetAndGenerate();
       return;
     }
 
@@ -79,20 +85,28 @@ export default function LottoGenerator() {
         options: { adGroupId: INTERSTITIAL_AD_ID },
         onEvent: (event: any) => {
           if (event.type === 'dismissed') {
-            performGeneration();
+            resetAndGenerate();
             adLoadedRef.current = false;
             loadAd();
           }
         },
         onError: () => {
-          performGeneration();
+          resetAndGenerate();
           adLoadedRef.current = false;
           loadAd();
         },
       });
     } catch {
-      performGeneration();
+      resetAndGenerate();
     }
+  };
+
+  const resetAndGenerate = () => {
+    setGeneratedGames([]);
+    setGameCount(1);
+    setMode('random');
+    setExcludedNumbers([]);
+    setIncludedNumbers([]);
   };
 
   const handleNumberApply = (excluded: number[], included: number[]) => {
@@ -213,6 +227,17 @@ export default function LottoGenerator() {
 
       {/* 결과 */}
       <GameResult games={generatedGames} />
+
+      {/* 새로 생성하기 버튼 - 결과가 있을 때만 표시 */}
+      {generatedGames.length > 0 && (
+        <View style={styles.resetButtonContainer}>
+          <TouchableOpacity style={styles.resetButton} onPress={handleReset} activeOpacity={0.7}>
+            <Text typography="body2" fontWeight="bold" style={styles.resetButtonText}>
+              새로 생성하기
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* 안내 */}
       <View style={styles.notice}>
@@ -362,6 +387,19 @@ const styles = StyleSheet.create({
   },
   generateWrapper: {
     marginBottom: 12,
+  },
+  resetButtonContainer: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  resetButton: {
+    backgroundColor: '#F4F4F4',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  resetButtonText: {
+    color: '#6B7684',
   },
   notice: {
     paddingHorizontal: 4,
