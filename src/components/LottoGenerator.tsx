@@ -8,7 +8,7 @@ import GameResult from './GameResult';
 import { fetchLotteryStatistics, type StatisticsData } from '../utils/fetchLotteryStatistics';
 import { generateNumbers, type GenerationMode } from '../utils/generateNumbers';
 
-const INTERSTITIAL_AD_ID = 'ait.v2.live.6a9582ec4e524364';
+const INTERSTITIAL_AD_ID = 'ait.v2.live.d3ee57bf5ef34285';
 
 const MODE_OPTIONS: { key: GenerationMode; label: string; desc: string }[] = [
   { key: 'random', label: '랜덤', desc: '순수 랜덤' },
