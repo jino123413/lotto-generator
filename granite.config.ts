@@ -11,7 +11,7 @@ export default defineConfig({
       brand: {
         displayName: '로또메이트',
         primaryColor: '#FF6B35',
-        icon: 'https://raw.githubusercontent.com/jino123413/lotto-generator/main/assets/logo.png',
+        icon: 'https://raw.githubusercontent.com/jino123413/app-logos/master/lotto-generator.png',
         bridgeColorMode: 'basic',
       },
       permissions: [],
