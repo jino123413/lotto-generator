@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TouchableOpacity, Modal, ScrollView, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, ScrollView, StyleSheet, Animated, Dimensions } from 'react-native';
 import { Text, Button } from '@toss/tds-react-native';
 
 type Props = {
@@ -26,14 +26,29 @@ function getBallColorGroup(num: number): string {
   return '5';
 }
 
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 export default function NumberSelector({ visible, excludedNumbers, includedNumbers, onClose, onApply }: Props) {
   const [tempExcluded, setTempExcluded] = useState<Set<number>>(new Set(excludedNumbers));
   const [tempIncluded, setTempIncluded] = useState<Set<number>>(new Set(includedNumbers));
+  const slideAnim = React.useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const [show, setShow] = useState(false);
 
   React.useEffect(() => {
     if (visible) {
+      setShow(true);
       setTempExcluded(new Set(excludedNumbers));
       setTempIncluded(new Set(includedNumbers));
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: SCREEN_HEIGHT, duration: 250, useNativeDriver: true }),
+      ]).start(() => setShow(false));
     }
   }, [visible]);
 
@@ -110,10 +125,12 @@ export default function NumberSelector({ visible, excludedNumbers, includedNumbe
     rows.push(Array.from({ length: Math.min(7, 45 - i) }, (_, j) => i + j + 1));
   }
 
+  if (!show) return null;
+
   return (
-    <Modal visible={visible} transparent animationType="slide">
-      <View style={styles.overlay}>
-        <View style={styles.container}>
+    <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
+      <TouchableOpacity style={styles.overlayBg} activeOpacity={1} onPress={onClose} />
+      <Animated.View style={[styles.container, { transform: [{ translateY: slideAnim }] }]}>
           <View style={styles.header}>
             <Text typography="h5" fontWeight="bold">번호 선택</Text>
             <TouchableOpacity onPress={onClose}>
@@ -162,17 +179,28 @@ export default function NumberSelector({ visible, excludedNumbers, includedNumbe
               <Button size="large" onPress={handleApply}>적용하기</Button>
             </View>
           </View>
-        </View>
-      </View>
-    </Modal>
+        </Animated.View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: 'flex-end',
+    zIndex: 1000,
+  },
+  overlayBg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   container: {
     backgroundColor: '#FFFFFF',
