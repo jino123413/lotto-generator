@@ -236,6 +236,9 @@ export default function LottoGenerator() {
               새로 생성하기
             </Text>
           </TouchableOpacity>
+          <Text typography="body3" style={styles.adNotice}>
+            광고 시청 후 초기화됩니다
+          </Text>
         </View>
       )}
 
@@ -400,6 +403,11 @@ const styles = StyleSheet.create({
   },
   resetButtonText: {
     color: '#6B7684',
+  },
+  adNotice: {
+    color: '#999',
+    marginTop: 6,
+    textAlign: 'center',
   },
   notice: {
     paddingHorizontal: 4,
