@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { Text, Button } from '@toss/tds-react-native';
-import { GoogleAdMob } from '@apps-in-toss/framework';
+import React, { useState, useEffect } from 'react';
+import { useInterstitialAd } from '../hooks/useInterstitialAd';
 import NumberSelector from './NumberSelector';
 import StatisticsPanel from './StatisticsPanel';
 import GameResult from './GameResult';
+import BannerAd from './BannerAd';
 import { fetchLotteryStatistics, type StatisticsData } from '../utils/fetchLotteryStatistics';
 import { generateNumbers, type GenerationMode } from '../utils/generateNumbers';
 
 const INTERSTITIAL_AD_ID = 'ait.v2.live.d3ee57bf5ef34285';
+const BANNER_AD_ID = 'ait.v2.live.9a237263c4b742f2';
 
 const MODE_OPTIONS: { key: GenerationMode; label: string; desc: string }[] = [
   { key: 'random', label: '랜덤', desc: '순수 랜덤' },
@@ -27,36 +27,9 @@ export default function LottoGenerator() {
   const [isLoading, setIsLoading] = useState(true);
   const [showNumberSelector, setShowNumberSelector] = useState(false);
 
-  const adLoadedRef = useRef(false);
-  const adAvailableRef = useRef(false);
-
-  // 광고 로드
-  const loadAd = () => {
-    try {
-      if (!GoogleAdMob || typeof GoogleAdMob.loadAppsInTossAdMob !== 'function') {
-        adAvailableRef.current = false;
-        return;
-      }
-      adAvailableRef.current = true;
-
-      GoogleAdMob.loadAppsInTossAdMob({
-        options: { adGroupId: INTERSTITIAL_AD_ID },
-        onEvent: (event: any) => {
-          if (event.type === 'loaded') {
-            adLoadedRef.current = true;
-          }
-        },
-        onError: () => {
-          adLoadedRef.current = false;
-        },
-      });
-    } catch {
-      adAvailableRef.current = false;
-    }
-  };
+  const { showAd } = useInterstitialAd(INTERSTITIAL_AD_ID);
 
   useEffect(() => {
-    loadAd();
     fetchLotteryStatistics(20)
       .then(data => setStatisticsData(data))
       .catch(() => setStatisticsData(null))
@@ -68,37 +41,16 @@ export default function LottoGenerator() {
     setGeneratedGames(games);
   };
 
-  // 번호 생성 (광고 없이 바로 실행)
   const handleGenerate = () => {
     performGeneration();
   };
 
-  // 새로 생성하기 (광고 표시 후 초기화)
   const handleReset = () => {
-    if (!adAvailableRef.current || !adLoadedRef.current) {
-      resetAndGenerate();
-      return;
-    }
-
-    try {
-      GoogleAdMob.showAppsInTossAdMob({
-        options: { adGroupId: INTERSTITIAL_AD_ID },
-        onEvent: (event: any) => {
-          if (event.type === 'dismissed') {
-            resetAndGenerate();
-            adLoadedRef.current = false;
-            loadAd();
-          }
-        },
-        onError: () => {
-          resetAndGenerate();
-          adLoadedRef.current = false;
-          loadAd();
-        },
-      });
-    } catch {
-      resetAndGenerate();
-    }
+    showAd({
+      onDismiss: () => {
+        resetAndGenerate();
+      },
+    });
   };
 
   const resetAndGenerate = () => {
@@ -117,305 +69,146 @@ export default function LottoGenerator() {
   const filterCount = excludedNumbers.length + includedNumbers.length;
 
   return (
-    <ScrollView style={styles.scrollView} contentContainerStyle={styles.container}>
-      {/* 헤더 */}
-      <View style={styles.header}>
-        <Text typography="h4" fontWeight="bold" style={styles.headerTitle}>
-          로또메이트
-        </Text>
-        <Text typography="body3" style={styles.headerSub}>
-          행운의 번호를 생성해보세요
-        </Text>
-      </View>
+    <div className="min-h-screen bg-[#F5F5F5]">
+      <div className="p-4 pb-10">
+        {/* 헤더 */}
+        <div className="bg-primary rounded-xl p-5 mb-3 text-center">
+          <h1 className="text-xl font-bold text-white">로또메이트</h1>
+          <p className="text-white/80 text-sm mt-1">행운의 번호를 생성해보세요</p>
+        </div>
 
-      {/* 통계 패널 */}
-      <StatisticsPanel statisticsData={statisticsData} isLoading={isLoading} />
+        {/* 통계 패널 */}
+        <StatisticsPanel statisticsData={statisticsData} isLoading={isLoading} />
 
-      {/* 설정 카드 */}
-      <View style={styles.card}>
-        {/* 게임 수 선택 */}
-        <Text typography="body2" fontWeight="bold" style={styles.sectionLabel}>게임 수</Text>
-        <View style={styles.gameCountRow}>
-          {[1, 2, 3, 4, 5].map(count => (
-            <TouchableOpacity
-              key={count}
-              style={[styles.countButton, gameCount === count && styles.countButtonActive]}
-              onPress={() => setGameCount(count)}
-              activeOpacity={0.7}
-            >
-              <Text
-                typography="body2"
-                fontWeight={gameCount === count ? 'bold' : 'regular'}
-                style={[styles.countText, gameCount === count && styles.countTextActive]}
+        {/* 설정 카드 */}
+        <div className="bg-white rounded-xl p-4 mb-3 shadow-sm">
+          {/* 게임 수 선택 */}
+          <p className="text-sm font-bold mb-2.5">게임 수</p>
+          <div className="flex gap-2">
+            {[1, 2, 3, 4, 5].map(count => (
+              <button
+                key={count}
+                className={`flex-1 py-2.5 rounded-lg text-sm text-center ${
+                  gameCount === count
+                    ? 'bg-primary text-white font-bold'
+                    : 'bg-[#F4F4F4] text-[#6B7684]'
+                }`}
+                onClick={() => setGameCount(count)}
               >
                 {count}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+              </button>
+            ))}
+          </div>
 
-        {/* 생성 모드 선택 */}
-        <Text typography="body2" fontWeight="bold" style={[styles.sectionLabel, { marginTop: 20 }]}>
-          생성 방식
-        </Text>
-        <View style={styles.modeRow}>
-          {MODE_OPTIONS.map(opt => (
-            <TouchableOpacity
-              key={opt.key}
-              style={[styles.modeButton, mode === opt.key && styles.modeButtonActive]}
-              onPress={() => setMode(opt.key)}
-              activeOpacity={0.7}
-            >
-              <Text
-                typography="body3"
-                fontWeight={mode === opt.key ? 'bold' : 'regular'}
-                style={[styles.modeText, mode === opt.key && styles.modeTextActive]}
+          {/* 생성 모드 선택 */}
+          <p className="text-sm font-bold mb-2.5 mt-5">생성 방식</p>
+          <div className="flex gap-2">
+            {MODE_OPTIONS.map(opt => (
+              <button
+                key={opt.key}
+                className={`flex-1 py-2.5 rounded-lg text-xs text-center ${
+                  mode === opt.key
+                    ? 'bg-primary text-white font-bold'
+                    : 'bg-[#F4F4F4] text-[#6B7684]'
+                }`}
+                onClick={() => setMode(opt.key)}
               >
                 {opt.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        {mode !== 'random' && !statisticsData && !isLoading && (
-          <Text typography="body3" style={styles.warningText}>
-            통계 데이터가 없어 랜덤으로 생성됩니다
-          </Text>
-        )}
+              </button>
+            ))}
+          </div>
+          {mode !== 'random' && !statisticsData && !isLoading && (
+            <p className="text-[#F04452] text-xs mt-2">통계 데이터가 없어 랜덤으로 생성됩니다</p>
+          )}
 
-        {/* 번호 필터 */}
-        <TouchableOpacity
-          style={styles.filterButton}
-          onPress={() => setShowNumberSelector(true)}
-          activeOpacity={0.7}
-        >
-          <Text typography="body2" style={styles.filterLabel}>번호 필터</Text>
-          <View style={styles.filterRight}>
-            {filterCount > 0 && (
-              <View style={styles.filterBadge}>
-                <Text typography="body3" fontWeight="bold" style={styles.filterBadgeText}>
+          {/* 번호 필터 */}
+          <button
+            className="flex justify-between items-center w-full py-3.5 mt-5 border-t border-[#F0F0F0]"
+            onClick={() => setShowNumberSelector(true)}
+          >
+            <span className="text-sm text-[#333]">번호 필터</span>
+            <div className="flex items-center gap-2">
+              {filterCount > 0 && (
+                <span className="bg-primary text-white text-xs font-bold px-2 py-0.5 rounded-full">
                   {filterCount}
-                </Text>
-              </View>
-            )}
-            <Text typography="body2" style={styles.filterArrow}>›</Text>
-          </View>
-        </TouchableOpacity>
+                </span>
+              )}
+              <span className="text-[#999] text-xl">›</span>
+            </div>
+          </button>
 
-        {/* 필터 요약 */}
-        {(excludedNumbers.length > 0 || includedNumbers.length > 0) && (
-          <View style={styles.filterSummary}>
-            {excludedNumbers.length > 0 && (
-              <Text typography="body3" style={styles.filterSummaryText}>
-                제외: {excludedNumbers.sort((a, b) => a - b).join(', ')}
-              </Text>
-            )}
-            {includedNumbers.length > 0 && (
-              <Text typography="body3" style={styles.filterIncludeText}>
-                포함: {includedNumbers.sort((a, b) => a - b).join(', ')}
-              </Text>
-            )}
-          </View>
+          {/* 필터 요약 */}
+          {(excludedNumbers.length > 0 || includedNumbers.length > 0) && (
+            <div className="pt-1">
+              {excludedNumbers.length > 0 && (
+                <p className="text-[#999] text-xs">
+                  제외: {[...excludedNumbers].sort((a, b) => a - b).join(', ')}
+                </p>
+              )}
+              {includedNumbers.length > 0 && (
+                <p className="text-[#3182F6] text-xs mt-0.5">
+                  포함: {[...includedNumbers].sort((a, b) => a - b).join(', ')}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 생성 버튼 */}
+        <div className="mb-3">
+          <button
+            className="w-full py-3.5 bg-primary text-white rounded-xl font-bold text-base"
+            onClick={handleGenerate}
+          >
+            번호 생성하기
+          </button>
+        </div>
+
+        {/* 결과 */}
+        <GameResult games={generatedGames} />
+
+        {/* 배너 광고 */}
+        {generatedGames.length > 0 && (
+          <div className="mb-3">
+            <BannerAd adGroupId={BANNER_AD_ID} />
+          </div>
         )}
-      </View>
 
-      {/* 생성 버튼 */}
-      <View style={styles.generateWrapper}>
-        <Button size="large" onPress={handleGenerate}>
-          번호 생성하기
-        </Button>
-      </View>
+        {/* 새로 생성하기 버튼 */}
+        {generatedGames.length > 0 && (
+          <div className="flex flex-col items-center mb-3">
+            <button
+              className="bg-[#F4F4F4] py-3 px-6 rounded-lg"
+              onClick={handleReset}
+            >
+              <span className="text-[#6B7684] text-sm font-bold">새로 생성하기</span>
+            </button>
+            <p className="text-[#999] text-xs mt-1.5 flex items-center gap-1">
+              <span className="bg-[#999] text-white text-[10px] font-bold px-1 rounded">AD</span>
+              광고 시청 후 초기화됩니다
+            </p>
+          </div>
+        )}
 
-      {/* 결과 */}
-      <GameResult games={generatedGames} />
+        {/* 안내 */}
+        <div className="px-1 mt-1">
+          <p className="text-[#BBB] text-xs text-center leading-[18px]">
+            로또 번호는 순수 확률에 의해 결정되며, 통계 기반 추천은 참고용입니다.
+          </p>
+          <p className="text-[#BBB] text-xs text-center leading-[18px]">
+            당첨을 보장하지 않습니다. 책임감 있는 구매를 권장합니다.
+          </p>
+        </div>
 
-      {/* 새로 생성하기 버튼 - 결과가 있을 때만 표시 */}
-      {generatedGames.length > 0 && (
-        <View style={styles.resetButtonContainer}>
-          <TouchableOpacity style={styles.resetButton} onPress={handleReset} activeOpacity={0.7}>
-            <Text typography="body2" fontWeight="bold" style={styles.resetButtonText}>
-              새로 생성하기
-            </Text>
-          </TouchableOpacity>
-          <Text typography="body3" style={styles.adNotice}>
-            광고 시청 후 초기화됩니다
-          </Text>
-        </View>
-      )}
-
-      {/* 안내 */}
-      <View style={styles.notice}>
-        <Text typography="body3" style={styles.noticeText}>
-          로또 번호는 순수 확률에 의해 결정되며, 통계 기반 추천은 참고용입니다.
-        </Text>
-        <Text typography="body3" style={styles.noticeText}>
-          당첨을 보장하지 않습니다. 책임감 있는 구매를 권장합니다.
-        </Text>
-      </View>
-
-      {/* 번호 선택 모달 */}
-      <NumberSelector
-        visible={showNumberSelector}
-        excludedNumbers={excludedNumbers}
-        includedNumbers={includedNumbers}
-        onClose={() => setShowNumberSelector(false)}
-        onApply={handleNumberApply}
-      />
-    </ScrollView>
+        {/* 번호 선택 모달 */}
+        <NumberSelector
+          visible={showNumberSelector}
+          excludedNumbers={excludedNumbers}
+          includedNumbers={includedNumbers}
+          onClose={() => setShowNumberSelector(false)}
+          onApply={handleNumberApply}
+        />
+      </div>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
-  container: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  header: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 12,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-  },
-  headerSub: {
-    color: 'rgba(255,255,255,0.8)',
-    marginTop: 4,
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  sectionLabel: {
-    marginBottom: 10,
-  },
-  gameCountRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  countButton: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: '#F4F4F4',
-    alignItems: 'center',
-  },
-  countButtonActive: {
-    backgroundColor: '#FF6B35',
-  },
-  countText: {
-    color: '#6B7684',
-  },
-  countTextActive: {
-    color: '#FFFFFF',
-  },
-  modeRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  modeButton: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: '#F4F4F4',
-    alignItems: 'center',
-  },
-  modeButtonActive: {
-    backgroundColor: '#FF6B35',
-  },
-  modeText: {
-    color: '#6B7684',
-  },
-  modeTextActive: {
-    color: '#FFFFFF',
-  },
-  warningText: {
-    color: '#F04452',
-    marginTop: 8,
-  },
-  filterButton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 14,
-    marginTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-  },
-  filterLabel: {
-    color: '#333',
-  },
-  filterRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  filterBadge: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  filterBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-  },
-  filterArrow: {
-    color: '#999',
-    fontSize: 20,
-  },
-  filterSummary: {
-    paddingTop: 4,
-  },
-  filterSummaryText: {
-    color: '#999',
-    fontSize: 12,
-  },
-  filterIncludeText: {
-    color: '#3182F6',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  generateWrapper: {
-    marginBottom: 12,
-  },
-  resetButtonContainer: {
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  resetButton: {
-    backgroundColor: '#F4F4F4',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-  },
-  resetButtonText: {
-    color: '#6B7684',
-  },
-  adNotice: {
-    color: '#999',
-    marginTop: 6,
-    textAlign: 'center',
-  },
-  notice: {
-    paddingHorizontal: 4,
-    marginTop: 4,
-  },
-  noticeText: {
-    color: '#BBB',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-});
